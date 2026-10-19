@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Cookies,
+  HttpCode,
   Post,
   Res,
   UnauthorizedException,
@@ -15,6 +16,7 @@ import { JwtService } from '@nestjs/jwt';
 import type { ResponseUser } from '../user/interfaces/user.interface.js';
 import { ConfigService } from '@nestjs/config';
 import { RefreshTokenService } from '../refreshToken/refresh.service.js';
+import type { IAuthServiceTokens } from './interfaces/auth.interface.js';
 
 @Controller('auth')
 export class AuthController {
@@ -26,13 +28,9 @@ export class AuthController {
     private readonly refreshService: RefreshTokenService,
   ) {}
   @Post('sign-up')
+  @HttpCode(201)
   async signUp(@Body() dto: RegisterDTO) {
     return await this.service.register(dto);
-  }
-
-  @Post()
-  async shit(@Body() param: { piss: string }) {
-    console.log(param);
   }
 
   @Post('sign-in')
@@ -76,14 +74,53 @@ export class AuthController {
   }
 
   @Post('refresh')
-  async refreshToken(@Cookies('refresh') refresh: string) {
-    const refreshToken = await this.refreshService.get(refresh);
-    if (!refreshToken) {
+  async refreshToken(
+    @Res({ passthrough: true }) res: Response,
+    @Cookies('refresh') refresh: string,
+  ): Promise<IAuthServiceTokens> {
+    const refreshTokenEntity = await this.refreshService.get(refresh);
+    if (!refreshTokenEntity) {
       throw new UnauthorizedException(
         'Refresh token is invalid or does not exists',
       );
     }
-
-    return refreshToken;
+    if (!refreshTokenEntity.user) {
+      throw new UnauthorizedException('User no longer exists');
+    }
+    try {
+      const payload = await this.jwtService.verifyAsync(refresh, {
+        secret: this.config.getOrThrow('REFRESH_TOKEN_SECRET'),
+      });
+      const accessToken = await this.jwtService.signAsync(
+        { sub: payload.sub, role: refreshTokenEntity.user.role },
+        {
+          expiresIn: '15m',
+          secret: this.config.getOrThrow('ACCESS_TOKEN_SECRET'),
+        },
+      );
+      const n_refreshToken = await this.jwtService.signAsync(
+        {
+          sub: payload.sub,
+          type: 'refresh',
+        },
+        {
+          expiresIn: '7d',
+          secret: this.config.getOrThrow('REFRESH_TOKEN_SECRET'),
+        },
+      );
+      this.host.httpAdapter.setCookie(res, 'refresh', n_refreshToken, {
+        httpOnly: true,
+        secure: this.config.getOrThrow('NODE_ENV') === 'prod' ? true : false,
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        sameSite: 'strict',
+        path: '/auth/refresh',
+      });
+      await this.refreshService.update(payload.sub, n_refreshToken);
+      return {
+        accessToken,
+      };
+    } catch {
+      throw new UnauthorizedException('Refresh token expired. Login again.');
+    }
   }
 }

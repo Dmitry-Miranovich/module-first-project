@@ -1,4 +1,4 @@
-import { Injectable, Res } from '@nestjs/common';
+import { Injectable, NotFoundException, Res } from '@nestjs/common';
 import { RefreshToken } from './entity/token.entity.js';
 import { IRefreshTokenService } from './refresh.interface.js';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -43,8 +43,23 @@ export class RefreshTokenService implements IRefreshTokenService {
     });
     return e_token;
   }
-  update(userId: string, refreshToken: string): Promise<RefreshToken> {
-    throw new Error('Method not implemented.');
+  async update(userId: string, refreshToken: string): Promise<void> {
+    const hashedIncome = createHash('sha256')
+      .update(refreshToken)
+      .digest('hex');
+    try {
+      const updateRes = await this.refreshTokenRep.update(
+        { userId },
+        {
+          tokenHash: hashedIncome,
+        },
+      );
+      if (updateRes.affected === 0) {
+        throw new NotFoundException('No Token was updated');
+      }
+    } catch (err) {
+      throw new Error('Failed to update the token', { cause: err });
+    }
   }
 
   validate(token: RefreshToken): boolean {

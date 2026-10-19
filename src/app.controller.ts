@@ -15,12 +15,6 @@ import { CreateUserDTO } from './user/dto/create-user.dto.js';
 export class AppController {
   constructor(private readonly userService: UserService) {}
 
-  @Get()
-  @HttpCode(200)
-  async findByEmail(@Query('email') email: string) {
-    return this.userService.findByEmail(email);
-  }
-
   @Post()
   @HttpCode(201)
   async create(@Body() dto: CreateUserDTO): Promise<User> {

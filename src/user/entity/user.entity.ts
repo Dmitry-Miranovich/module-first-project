@@ -1,4 +1,10 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  DeleteDateColumn,
+  Entity,
+  OneToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { RefreshToken } from '../../refreshToken/entity/token.entity.js';
 import type { Relation } from 'typeorm';
 export enum UserRole {
@@ -27,4 +33,7 @@ export class User {
     length: 1000,
   })
   description: string;
+
+  @DeleteDateColumn()
+  deletedAt: Date;
 }

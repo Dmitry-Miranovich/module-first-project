@@ -1,6 +1,13 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { UserService } from '../user/user.service.js';
-import { IAuthService } from './interfaces/auth.interface.js';
+import {
+  IAuthService,
+  IAuthServiceTokens,
+} from './interfaces/auth.interface.js';
 import { RegisterDTO } from './dto/register.dto.js';
 import { LoginDTO } from './dto/login.dto.js';
 import { PasswordHasherService } from '../passwordHasher/passwordHasher.service.js';
@@ -11,9 +18,6 @@ export class AuthService implements IAuthService {
     private readonly userRepository: UserService,
     private readonly passwordHash: PasswordHasherService,
   ) {}
-
-  public readonly TOKEN_SECRET: string = 'super_secret_key';
-  public readonly REFRESH_SECRET: string = 'super_secret_refresh_key';
 
   async register(dto: RegisterDTO) {
     if (await this.userRepository.findByEmail(dto.email)) {
@@ -26,9 +30,12 @@ export class AuthService implements IAuthService {
   }
   async login(dto: LoginDTO) {
     const found = await this.userRepository.findByEmail(dto.email);
+    if (!found) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
     const valid = await this.passwordHash.verify(
       dto.password,
-      found?.passwordHash,
+      found.passwordHash,
     );
     if (!valid || !found?.passwordHash) {
       return null;
