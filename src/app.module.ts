@@ -1,6 +1,4 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller.js';
-import { AppService } from './app.service.js';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './user/entity/user.entity.js';
@@ -17,7 +15,6 @@ import { RefreshToken } from './refreshToken/entity/token.entity.js';
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => {
         const database = config.getOrThrow('POSTGRES_DB') ?? 'localhost';
-        console.log();
         return {
           type: 'postgres',
           username: config.getOrThrow('POSTGRES_USER'),
@@ -33,7 +30,5 @@ import { RefreshToken } from './refreshToken/entity/token.entity.js';
     AuthModule,
     UserModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
 })
 export class AppModule {}

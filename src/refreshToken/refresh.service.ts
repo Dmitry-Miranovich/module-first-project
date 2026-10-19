@@ -21,7 +21,6 @@ export class RefreshTokenService implements IRefreshTokenService {
       const tokenEntity = this.refreshTokenRep.create({
         userId: userId,
         tokenHash,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       });
       const s_token = await this.refreshTokenRep.save(tokenEntity);
       return s_token;
@@ -43,13 +42,17 @@ export class RefreshTokenService implements IRefreshTokenService {
     });
     return e_token;
   }
-  async update(userId: string, refreshToken: string): Promise<void> {
+  async update(
+    token_id: string,
+    userId: string,
+    refreshToken: string,
+  ): Promise<void> {
     const hashedIncome = createHash('sha256')
       .update(refreshToken)
       .digest('hex');
     try {
       const updateRes = await this.refreshTokenRep.update(
-        { userId },
+        { id: token_id, userId },
         {
           tokenHash: hashedIncome,
         },
@@ -60,9 +63,5 @@ export class RefreshTokenService implements IRefreshTokenService {
     } catch (err) {
       throw new Error('Failed to update the token', { cause: err });
     }
-  }
-
-  validate(token: RefreshToken): boolean {
-    return !token.revoked && token.expiresAt.getTime() > Date.now();
   }
 }

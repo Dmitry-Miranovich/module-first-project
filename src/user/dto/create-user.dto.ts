@@ -10,6 +10,10 @@ export class CreateUserDTO {
   email: string;
   @IsString()
   @MinLength(8)
+  @MaxLength(100)
+  login: string;
+  @IsString()
+  @MinLength(8)
   passwordHash: string;
   @IsInt()
   age: number;

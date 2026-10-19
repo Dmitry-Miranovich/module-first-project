@@ -18,7 +18,8 @@ import { ConfigService } from '@nestjs/config';
 import { RefreshTokenService } from '../refreshToken/refresh.service.js';
 import type { IAuthServiceTokens } from './interfaces/auth.interface.js';
 import { ApiOperation } from '@nestjs/swagger';
-import { getSanitizedUser } from '../user/utils/createSanizedUser.js';
+import { getSanitizedUser } from '../user/utils/createSanitizedUser.js';
+import { randomUUID } from 'crypto';
 
 @Controller('auth')
 export class AuthController {
@@ -35,8 +36,41 @@ export class AuthController {
     description: 'Registering user based on requirements from DTO',
   })
   @HttpCode(201)
-  async signUp(@Body() dto: RegisterDTO) {
-    return getSanitizedUser(await this.service.register(dto));
+  async signUp(
+    @Res({ passthrough: true }) res: Response,
+    @Body() dto: RegisterDTO,
+  ): Promise<ResponseUser> {
+    const createdUser = await this.service.register(dto);
+    const accessToken = await this.jwtService.signAsync(
+      { sub: createdUser.id, role: createdUser.role },
+      {
+        expiresIn: '15m',
+        secret: this.config.getOrThrow('ACCESS_TOKEN_SECRET'),
+      },
+    );
+    const refreshToken = await this.jwtService.signAsync(
+      {
+        sub: createdUser.id,
+        type: 'refresh',
+        jti: randomUUID(),
+      },
+      {
+        expiresIn: '7d',
+        secret: this.config.getOrThrow('REFRESH_TOKEN_SECRET'),
+      },
+    );
+    await this.refreshService.create(createdUser.id, refreshToken);
+    this.host.httpAdapter.setCookie(res, 'refresh', refreshToken, {
+      httpOnly: true,
+      secure: this.config.getOrThrow('NODE_ENV') === 'prod' ? true : false,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      sameSite: 'strict',
+      path: '/auth/refresh',
+    });
+    return {
+      user: getSanitizedUser(createdUser),
+      accessToken: accessToken,
+    };
   }
 
   @ApiOperation({
@@ -49,9 +83,6 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ): Promise<ResponseUser> {
     const user = await this.service.login(dto);
-    if (!user) {
-      throw new UnauthorizedException('Invalid email or password');
-    }
     const accessToken = await this.jwtService.signAsync(
       { sub: user.id, role: user.role },
       {
@@ -63,6 +94,7 @@ export class AuthController {
       {
         sub: user.id,
         type: 'refresh',
+        jti: randomUUID(),
       },
       {
         expiresIn: '7d',
@@ -113,9 +145,10 @@ export class AuthController {
           secret: this.config.getOrThrow('ACCESS_TOKEN_SECRET'),
         },
       );
-      const n_refreshToken = await this.jwtService.signAsync(
+      const replaceRefreshToken = await this.jwtService.signAsync(
         {
           sub: payload.sub,
+          jti: randomUUID(),
           type: 'refresh',
         },
         {
@@ -123,14 +156,18 @@ export class AuthController {
           secret: this.config.getOrThrow('REFRESH_TOKEN_SECRET'),
         },
       );
-      this.host.httpAdapter.setCookie(res, 'refresh', n_refreshToken, {
+      await this.refreshService.update(
+        refreshTokenEntity.id,
+        payload.sub,
+        replaceRefreshToken,
+      );
+      this.host.httpAdapter.setCookie(res, 'refresh', replaceRefreshToken, {
         httpOnly: true,
         secure: this.config.getOrThrow('NODE_ENV') === 'prod' ? true : false,
         maxAge: 7 * 24 * 60 * 60 * 1000,
         sameSite: 'strict',
         path: '/auth/refresh',
       });
-      await this.refreshService.update(payload.sub, n_refreshToken);
       return {
         accessToken,
       };

@@ -31,16 +31,16 @@ export class UserController {
     description: 'Searching for all of the users, based on their email or not',
   })
   @ApiQuery({
-    name: 'searchEmail',
+    name: 'searchLogin',
     required: false,
     type: String,
   })
   @HttpCode(200)
   async findAll(
-    @Query('searchEmail')
-    searchEmail?: string,
+    @Query('searchLogin')
+    searchLogin?: string,
   ) {
-    return await this.userService.findAll(searchEmail);
+    return await this.userService.findAll(searchLogin);
   }
 
   @ApiBearerAuth()

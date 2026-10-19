@@ -13,6 +13,11 @@ export class UpdateUserDTO {
   @IsOptional()
   @IsString()
   @MinLength(8)
+  @MaxLength(100)
+  login: string;
+  @IsOptional()
+  @IsString()
+  @MinLength(8)
   password?: string;
   @IsOptional()
   @IsInt()

@@ -22,12 +22,6 @@ export class RefreshToken {
   user: Relation<User>;
   @Column({ unique: true })
   tokenHash: string;
-  @Column('timestamp')
-  expiresAt: Date;
-  @Column({
-    default: false,
-  })
-  revoked: boolean;
   @CreateDateColumn()
   createdAt: Date;
 }

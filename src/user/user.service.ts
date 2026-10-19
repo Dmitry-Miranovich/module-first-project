@@ -15,20 +15,20 @@ import { PasswordHasherService } from '../passwordHasher/passwordHasher.service.
 @Injectable()
 export class UserService implements IUserService {
   constructor(
-    @InjectRepository(User) private readonly dataSource: Repository<User>,
+    @InjectRepository(User) private readonly userRep: Repository<User>,
     private readonly passwordHash: PasswordHasherService,
   ) {}
-  async findAll(searchEmail?: string): Promise<User[] | null> {
-    return await this.dataSource.find({
+  async findAll(searchLogin?: string): Promise<User[] | null> {
+    return await this.userRep.find({
       select: {
         email: true,
         age: true,
         description: true,
         createdAt: true,
       },
-      where: searchEmail
+      where: searchLogin
         ? {
-            email: ILike(`%${searchEmail}%`),
+            login: ILike(`%${searchLogin}%`),
           }
         : undefined,
     });
@@ -42,7 +42,7 @@ export class UserService implements IUserService {
       email: dto.email,
       description: dto.description,
     };
-    const u_user = await this.dataSource.update(user_id, change_user);
+    const u_user = await this.userRep.update(user_id, change_user);
     if (u_user.affected === 0) {
       throw new NotFoundException('User is not found');
     }
@@ -50,7 +50,7 @@ export class UserService implements IUserService {
   }
   async delete(user_id: string): Promise<string> {
     try {
-      const deleteRes = await this.dataSource.softDelete(user_id);
+      const deleteRes = await this.userRep.softDelete(user_id);
       if (deleteRes.affected === 0) {
         throw new NotFoundException('User to delete was not found');
       }
@@ -61,7 +61,7 @@ export class UserService implements IUserService {
   }
 
   async findByID(id: string): Promise<User | null> {
-    const user = await this.dataSource.findOne({
+    const user = await this.userRep.findOne({
       where: {
         id: id,
       },
@@ -74,25 +74,28 @@ export class UserService implements IUserService {
     });
     return user;
   }
-  async findByEmail(email: string): Promise<User | null> {
-    const user = await this.dataSource.findOne({
+  async findByCriteria(value: string, key: keyof User): Promise<User | null> {
+    const user = await this.userRep.findOne({
       where: {
-        email,
+        [key]: value,
       },
     });
     return user;
   }
   async create(dto: CreateUserDTO): Promise<User> {
     try {
-      const n_user = this.dataSource.create({
+      const newUser = this.userRep.create({
+        login: dto.login,
         age: dto.age,
         email: dto.email,
         description: dto.description,
+        passwordHash: dto.passwordHash,
         role: UserRole.USER,
       });
-      await this.dataSource.save(n_user);
-      return n_user;
-    } catch {
+      await this.userRep.save(newUser);
+      return newUser;
+    } catch (err) {
+      console.log(err);
       throw new HttpException(
         'Failed to save user',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -101,7 +104,7 @@ export class UserService implements IUserService {
   }
   async updatePasswordHash(id: string, n_hash?: string) {
     try {
-      await this.dataSource.update({ id: id }, { passwordHash: n_hash });
+      await this.userRep.update({ id: id }, { passwordHash: n_hash });
     } catch {
       throw new HttpException(
         'Failed to save update password hash',
