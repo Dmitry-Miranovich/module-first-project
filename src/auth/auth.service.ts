@@ -4,7 +4,6 @@ import { IAuthService } from './interfaces/auth.interface.js';
 import { RegisterDTO } from './dto/register.dto.js';
 import { LoginDTO } from './dto/login.dto.js';
 import { PasswordHasherService } from '../passwordHasher/passwordHasher.service.js';
-import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService implements IAuthService {

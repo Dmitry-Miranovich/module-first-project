@@ -23,11 +23,11 @@ export class RefreshToken {
   @Column({ unique: true })
   tokenHash: string;
   @Column('timestamp')
-  expiresAt: string;
+  expiresAt: Date;
   @Column({
     default: false,
   })
   revoked: boolean;
   @CreateDateColumn()
-  createdAt: string;
+  createdAt: Date;
 }

@@ -6,7 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './user/entity/user.entity.js';
 import { UserModule } from './user/user.module.js';
 import { AuthModule } from './auth/auth.module.js';
-import { RefreshToken } from './passwordHasher/entity/token.entity.js';
+import { RefreshToken } from './refreshToken/entity/token.entity.js';
 
 @Module({
   imports: [

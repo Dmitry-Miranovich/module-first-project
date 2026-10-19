@@ -1,5 +1,5 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { RefreshToken } from '../../passwordHasher/entity/token.entity.js';
+import { RefreshToken } from '../../refreshToken/entity/token.entity.js';
 import type { Relation } from 'typeorm';
 export enum UserRole {
   USER = 'USER',
