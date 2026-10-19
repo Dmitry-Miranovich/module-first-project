@@ -11,12 +11,14 @@ import { ILike, Repository } from 'typeorm';
 import { CreateUserDTO } from './dto/create-user.dto.js';
 import { UpdateUserDTO } from './dto/update-user.dto.js';
 import { PasswordHasherService } from '../passwordHasher/passwordHasher.service.js';
+import { RefreshTokenService } from '../refreshToken/refresh.service.js';
 
 @Injectable()
 export class UserService implements IUserService {
   constructor(
     @InjectRepository(User) private readonly userRep: Repository<User>,
     private readonly passwordHash: PasswordHasherService,
+    private readonly refreshTokenService: RefreshTokenService,
   ) {}
   async findAll(searchLogin?: string): Promise<User[] | null> {
     return await this.userRep.find({
@@ -51,6 +53,7 @@ export class UserService implements IUserService {
   async delete(user_id: string): Promise<string> {
     try {
       const deleteRes = await this.userRep.softDelete(user_id);
+      await this.refreshTokenService.deleteByUser(user_id);
       if (deleteRes.affected === 0) {
         throw new NotFoundException('User to delete was not found');
       }
@@ -80,6 +83,7 @@ export class UserService implements IUserService {
         [key]: value,
       },
     });
+
     return user;
   }
   async create(dto: CreateUserDTO): Promise<User> {

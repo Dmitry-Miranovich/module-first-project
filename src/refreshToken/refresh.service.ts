@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { RefreshToken } from './entity/token.entity.js';
 import { IRefreshTokenService } from './refresh.interface.js';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -62,6 +67,20 @@ export class RefreshTokenService implements IRefreshTokenService {
       }
     } catch (err) {
       throw new Error('Failed to update the token', { cause: err });
+    }
+  }
+  async deleteByUser(userId: string): Promise<boolean> {
+    try {
+      await this.refreshTokenRep.delete({ userId });
+      return true;
+    } catch (err) {
+      if (err instanceof NotFoundException) {
+        throw new NotFoundException('User is not found');
+      }
+      throw new HttpException(
+        `Failed to delete refresh token by user ${userId}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 }
