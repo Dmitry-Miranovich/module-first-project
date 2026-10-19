@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Res } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { RefreshToken } from './entity/token.entity.js';
 import { IRefreshTokenService } from './refresh.interface.js';
 import { InjectRepository } from '@nestjs/typeorm';

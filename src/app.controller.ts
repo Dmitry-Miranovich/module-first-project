@@ -1,23 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  HttpCode,
-  Inject,
-  Post,
-  Query,
-} from '@nestjs/common';
-import { User } from './user/entity/user.entity.js';
-import { UserService } from './user/user.service.js';
-import { CreateUserDTO } from './user/dto/create-user.dto.js';
+import { Controller } from '@nestjs/common';
 
 @Controller()
-export class AppController {
-  constructor(private readonly userService: UserService) {}
-
-  @Post()
-  @HttpCode(201)
-  async create(@Body() dto: CreateUserDTO): Promise<User> {
-    return await this.userService.create(dto);
-  }
-}
+export class AppController {}

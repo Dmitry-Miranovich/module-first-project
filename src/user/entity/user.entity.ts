@@ -1,5 +1,6 @@
 import {
   Column,
+  CreateDateColumn,
   DeleteDateColumn,
   Entity,
   OneToMany,
@@ -33,7 +34,8 @@ export class User {
     length: 1000,
   })
   description: string;
-
+  @CreateDateColumn()
+  createdAt: Date;
   @DeleteDateColumn()
   deletedAt: Date;
 }

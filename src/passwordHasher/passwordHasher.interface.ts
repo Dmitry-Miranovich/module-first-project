@@ -1,5 +1,5 @@
 export interface IPasswordHasher {
-  hash(password: string): Promise<string>;
+  hash(password: string): Promise<string | undefined>;
   verify(password: string, hash: string): Promise<boolean>;
   needsRehash(hash: string): boolean;
 }

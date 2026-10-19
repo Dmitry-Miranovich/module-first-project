@@ -1,13 +1,11 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { UserService } from '../user/user.service.js';
-import {
-  IAuthService,
-  IAuthServiceTokens,
-} from './interfaces/auth.interface.js';
+import { IAuthService } from './interfaces/auth.interface.js';
 import { RegisterDTO } from './dto/register.dto.js';
 import { LoginDTO } from './dto/login.dto.js';
 import { PasswordHasherService } from '../passwordHasher/passwordHasher.service.js';
@@ -23,8 +21,13 @@ export class AuthService implements IAuthService {
     if (await this.userRepository.findByEmail(dto.email)) {
       throw new ConflictException('Email already registered');
     }
+    if (!dto.password) {
+      throw new BadRequestException('Password is required');
+    }
     return await this.userRepository.create({
-      ...dto,
+      age: dto.age,
+      description: dto.description,
+      email: dto.email,
       passwordHash: await this.passwordHash.hash(dto.password),
     });
   }
