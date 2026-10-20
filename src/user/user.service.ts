@@ -23,6 +23,7 @@ export class UserService implements IUserService {
   async findAll(searchLogin?: string): Promise<User[] | null> {
     return await this.userRep.find({
       select: {
+        login: true,
         email: true,
         age: true,
         description: true,
