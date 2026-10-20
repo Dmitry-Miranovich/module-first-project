@@ -9,6 +9,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { CursorPaginationDto } from './dto/cursor-pagination.dto.js';
 import { UpdateUserDTO } from './dto/update-user.dto.js';
 import { AuthJWTGuard } from '../auth/auth.guard.js';
 import { UserService } from './user.service.js';
@@ -28,19 +29,30 @@ export class UserController {
   @Get()
   @ApiOperation({
     summary: 'Users search',
-    description: 'Searching for all of the users, based on their email or not',
+    description:
+      'Returns one page of users, newest first. Pass nextCursor back as cursor to load the following page. searchLogin filters the login.',
+  })
+  @ApiQuery({
+    name: 'cursor',
+    required: false,
+    type: String,
+    description: 'createdAt of the last user from the previous page',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Page size. Defaults are set to 10 users',
   })
   @ApiQuery({
     name: 'searchLogin',
     required: false,
     type: String,
+    description: 'Login params for additional filtering of the fetched users',
   })
   @HttpCode(200)
-  async findAll(
-    @Query('searchLogin')
-    searchLogin?: string,
-  ) {
-    return await this.userService.findAll(searchLogin);
+  async findUsers(@Query() pagination: CursorPaginationDto) {
+    return await this.userService.findUsers(pagination);
   }
 
   @ApiBearerAuth()

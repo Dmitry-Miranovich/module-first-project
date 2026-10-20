@@ -4,14 +4,15 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { IUserService } from './interfaces/user.interface.js';
+import { IUserService, UserPage } from './interfaces/user.interface.js';
 import { User, UserRole } from './entity/user.entity.js';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ILike, Repository } from 'typeorm';
+import { ILike, LessThan, Repository } from 'typeorm';
 import { CreateUserDTO } from './dto/create-user.dto.js';
 import { UpdateUserDTO } from './dto/update-user.dto.js';
 import { PasswordHasherService } from '../passwordHasher/passwordHasher.service.js';
 import { RefreshTokenService } from '../refreshToken/refresh.service.js';
+import { CursorPaginationDto } from './dto/cursor-pagination.dto.js';
 
 @Injectable()
 export class UserService implements IUserService {
@@ -20,8 +21,11 @@ export class UserService implements IUserService {
     private readonly passwordHash: PasswordHasherService,
     private readonly refreshTokenService: RefreshTokenService,
   ) {}
-  async findAll(searchLogin?: string): Promise<User[] | null> {
-    return await this.userRep.find({
+  async findUsers(cursorPagination: CursorPaginationDto): Promise<UserPage> {
+    const { searchLogin, cursor } = cursorPagination;
+    const limit = cursorPagination.limit ?? 10;
+
+    const users = await this.userRep.find({
       select: {
         login: true,
         email: true,
@@ -29,12 +33,26 @@ export class UserService implements IUserService {
         description: true,
         createdAt: true,
       },
-      where: searchLogin
-        ? {
-            login: ILike(`%${searchLogin}%`),
-          }
-        : undefined,
+      take: limit + 1,
+      order: {
+        createdAt: 'DESC',
+      },
+      where: {
+        login: searchLogin ? ILike(`%${searchLogin}%`) : undefined,
+        createdAt: cursor ? LessThan(new Date(cursor)) : undefined,
+      },
     });
+
+    const hasNextPage = users.length > limit;
+    if (hasNextPage) {
+      users.pop();
+    }
+
+    const last = users.at(-1);
+    return {
+      users,
+      nextCursor: hasNextPage && last ? last.createdAt.toISOString() : null,
+    };
   }
   async updateUser(user_id: string, dto: UpdateUserDTO): Promise<boolean> {
     const change_user = {
