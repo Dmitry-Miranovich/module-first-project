@@ -14,7 +14,7 @@ export class UpdateUserDTO {
   @IsString()
   @MinLength(8)
   @MaxLength(100)
-  login: string;
+  login?: string;
   @IsOptional()
   @IsString()
   @MinLength(8)

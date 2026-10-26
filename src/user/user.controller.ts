@@ -64,7 +64,7 @@ export class UserController {
   })
   async findUser(@Req() req: any) {
     const { user } = req;
-    return await this.userService.findByID(user.sub);
+    return await this.userService.findByCriteria(user.sub, 'id');
   }
   @ApiBearerAuth()
   @Put('my')

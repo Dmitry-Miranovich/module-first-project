@@ -56,6 +56,7 @@ export class UserService implements IUserService {
   }
   async updateUser(user_id: string, dto: UpdateUserDTO): Promise<boolean> {
     const change_user = {
+      login: dto.login,
       passwordHash: dto.password
         ? await this.passwordHash.hash(dto.password)
         : undefined,
@@ -82,20 +83,6 @@ export class UserService implements IUserService {
     }
   }
 
-  async findByID(id: string): Promise<User | null> {
-    const user = await this.userRep.findOne({
-      where: {
-        id: id,
-      },
-      select: {
-        email: true,
-        age: true,
-        description: true,
-        createdAt: true,
-      },
-    });
-    return user;
-  }
   async findByCriteria(value: string, key: keyof User): Promise<User | null> {
     const user = await this.userRep.findOne({
       where: {

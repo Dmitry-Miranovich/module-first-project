@@ -22,7 +22,6 @@ export interface UserPage {
 }
 
 export interface IUserService {
-  findByID: (id: string) => Promise<User | null>;
   findByCriteria: (value: string, key: keyof User) => Promise<User | null>;
   updatePasswordHash: (id: string, n_hash: string) => Promise<void>;
   create(dto: CreateUserDTO): Promise<User>;
