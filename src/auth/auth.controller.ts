@@ -1,67 +1,62 @@
-import {
-  Body,
-  Controller,
-  Post,
-  Res,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Body, Controller, Cookies, HttpCode, Post, Res } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
-import { HttpAdapterHost } from '@nestjs/core';
 
 import { RegisterDTO } from './dto/register.dto.js';
 import { LoginDTO } from './dto/login.dto.js';
-import { JwtService } from '@nestjs/jwt';
 import type { ResponseUser } from '../user/interfaces/user.interface.js';
-import { ConfigService } from '@nestjs/config';
+import type { IAuthServiceAccessToken } from './interfaces/auth.interface.js';
+import { ApiOperation } from '@nestjs/swagger';
+import { getSanitizedUser } from '../user/utils/createSanitizedUser.js';
 
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private readonly service: AuthService,
-    private readonly jwtService: JwtService,
-    private readonly host: HttpAdapterHost,
-    private readonly config: ConfigService,
-  ) {}
+  constructor(private readonly service: AuthService) {}
   @Post('sign-up')
-  async signUp(@Body() dto: RegisterDTO) {
-    return await this.service.register(dto);
+  @ApiOperation({
+    summary: 'User registration',
+    description: 'Registering user based on requirements from DTO',
+  })
+  @HttpCode(201)
+  async signUp(
+    @Res({ passthrough: true }) res: Response,
+    @Body() dto: RegisterDTO,
+  ): Promise<ResponseUser> {
+    const createdUser = await this.service.register(dto);
+    const { accessToken } = await this.service.issueSession(createdUser, res);
+    return {
+      user: getSanitizedUser(createdUser),
+      accessToken: accessToken,
+    };
   }
 
-  @Post()
-  async shit(@Body() param: { piss: string }) {
-    console.log(param);
-  }
-
+  @ApiOperation({
+    summary: 'User login',
+    description: 'Login in the user account, returning token',
+  })
   @Post('sign-in')
   async signIn(
     @Body() dto: LoginDTO,
     @Res({ passthrough: true }) res: Response,
   ): Promise<ResponseUser> {
     const user = await this.service.login(dto);
-    if (!user) {
-      throw new UnauthorizedException('Invalid email or password');
-    }
-    const accessToken = await this.jwtService.signAsync(
-      { sub: user.id, role: user.role },
-      { expiresIn: '15m', secret: this.service.TOKEN_SECRET },
-    );
-    const refreshToken = await this.jwtService.signAsync(
-      {
-        sub: user.id,
-        type: 'refresh',
-      },
-      { expiresIn: '7d', secret: this.service.REFRESH_SECRET },
-    );
-    this.host.httpAdapter.setCookie(res, 'refresh', refreshToken, {
-      httpOnly: true,
-      secure: this.config.getOrThrow('NODE_ENV') === 'prod' ? true : false,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      sameSite: 'strict',
-      path: '/auth/refresh',
-    });
+    const { accessToken } = await this.service.issueSession(user, res);
     return {
-      user,
+      user: getSanitizedUser(user),
       accessToken,
     };
+  }
+
+  @Post('refresh')
+  @ApiOperation({
+    summary: 'Receive a new token',
+    description:
+      'Get a new access_token based on your refreshToken from cookies',
+  })
+  async refreshToken(
+    @Res({ passthrough: true }) res: Response,
+    @Cookies('refresh') refresh: string,
+  ): Promise<IAuthServiceAccessToken> {
+    const { accessToken } = await this.service.refresh(refresh, res);
+    return { accessToken };
   }
 }

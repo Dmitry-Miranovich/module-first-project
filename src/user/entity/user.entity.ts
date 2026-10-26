@@ -1,5 +1,12 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { RefreshToken } from '../../passwordHasher/entity/token.entity.js';
+import {
+  Column,
+  CreateDateColumn,
+  DeleteDateColumn,
+  Entity,
+  OneToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
+import { RefreshToken } from '../../refreshToken/entity/token.entity.js';
 import type { Relation } from 'typeorm';
 export enum UserRole {
   USER = 'USER',
@@ -9,8 +16,12 @@ export enum UserRole {
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
-  @Column()
+  @Column({
+    unique: true,
+  })
   email: string;
+  @Column({ unique: true })
+  login: string;
   @Column()
   passwordHash: string;
   @OneToMany(() => RefreshToken, (token) => token.user)
@@ -27,4 +38,8 @@ export class User {
     length: 1000,
   })
   description: string;
+  @CreateDateColumn()
+  createdAt: Date;
+  @DeleteDateColumn()
+  deletedAt: Date;
 }
