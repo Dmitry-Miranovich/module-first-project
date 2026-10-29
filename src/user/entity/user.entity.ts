@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 import { RefreshToken } from '../../refreshToken/entity/token.entity.js';
 import type { Relation } from 'typeorm';
+import { UserFile } from '../../providers/entity/user-file.entity.js';
 export enum UserRole {
   USER = 'USER',
 }
@@ -26,6 +27,8 @@ export class User {
   passwordHash: string;
   @OneToMany(() => RefreshToken, (token) => token.user)
   tokens: Relation<RefreshToken[]>;
+  @OneToMany(() => UserFile, (file) => file.user)
+  avatars: Relation<UserFile[]>;
   @Column()
   age: number;
   @Column({
