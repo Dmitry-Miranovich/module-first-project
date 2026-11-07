@@ -1,7 +1,7 @@
 import { HttpException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { ILike, LessThan } from 'typeorm';
+import { DataSource, ILike, LessThan } from 'typeorm';
 import { PasswordHasherService } from '../passwordHasher/passwordHasher.service.js';
 import { RefreshTokenService } from '../refreshToken/refresh.service.js';
 import { User, UserRole } from './entity/user.entity.js';
@@ -26,6 +26,7 @@ describe('UserService', () => {
     email: 'ann@example.com',
     age: 20,
     description: 'hi',
+    balance: '100.00',
     createdAt: new Date('2026-10-20T00:00:00.000Z'),
   };
 
@@ -47,6 +48,7 @@ describe('UserService', () => {
         { provide: getRepositoryToken(User), useValue: userRep },
         { provide: PasswordHasherService, useValue: passwordHash },
         { provide: RefreshTokenService, useValue: refreshTokenService },
+        { provide: DataSource, useValue: {} },
       ],
     }).compile();
 
@@ -67,13 +69,13 @@ describe('UserService', () => {
           email: true,
           age: true,
           description: true,
+          balance: true,
           createdAt: true,
         },
         take: 11,
         order: { createdAt: 'DESC' },
         where: {
           login: ILike('%ann%'),
-          createdAt: undefined,
         },
       });
     });
@@ -98,7 +100,6 @@ describe('UserService', () => {
         expect.objectContaining({
           take: 2,
           where: {
-            login: undefined,
             createdAt: LessThan(new Date('2026-10-21T00:00:00.000Z')),
           },
         }),
@@ -124,6 +125,7 @@ describe('UserService', () => {
         email: 'ann@example.com',
         passwordHash: 'hashed-password',
         age: 20,
+        balance: '100.00',
         description: 'hi',
       };
 
@@ -145,6 +147,7 @@ describe('UserService', () => {
           email: 'ann@example.com',
           passwordHash: 'hashed-password',
           age: 20,
+          balance: '100.00',
           description: 'hi',
         }),
       ).rejects.toBeInstanceOf(HttpException);

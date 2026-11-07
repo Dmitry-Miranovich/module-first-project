@@ -14,7 +14,8 @@ export class AuthController {
   @Post('sign-up')
   @ApiOperation({
     summary: 'User registration',
-    description: 'Registering user based on requirements from DTO',
+    description:
+      'Creates a user with login, email, password, age, balance and description, then returns access and refresh tokens',
   })
   @HttpCode(201)
   async signUp(

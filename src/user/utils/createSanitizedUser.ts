@@ -7,6 +7,7 @@ export const getSanitizedUser = (user: User): SanitizedUser => {
     age: user.age,
     email: user.email,
     description: user.description,
+    balance: user.balance,
     createdAt: user.createdAt,
   };
 };

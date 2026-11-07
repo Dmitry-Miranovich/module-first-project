@@ -1,4 +1,5 @@
 import {
+  Check,
   Column,
   CreateDateColumn,
   DeleteDateColumn,
@@ -14,6 +15,7 @@ export enum UserRole {
 }
 
 @Entity()
+@Check(`"balance" >= 0`)
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -41,6 +43,13 @@ export class User {
     length: 1000,
   })
   description: string;
+  @Column({
+    type: 'numeric',
+    precision: 12,
+    scale: 2,
+    default: 0,
+  })
+  balance: string;
   @CreateDateColumn()
   createdAt: Date;
   @DeleteDateColumn()

@@ -1,10 +1,15 @@
 import {
+  BadRequestException,
   HttpException,
   HttpStatus,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { IUserService, UserPage } from './interfaces/user.interface.js';
+import {
+  IUserService,
+  UpdatedTransferUser,
+  UserPage,
+} from './interfaces/user.interface.js';
 import { User, UserRole } from './entity/user.entity.js';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, LessThan, Repository } from 'typeorm';
@@ -13,6 +18,9 @@ import { UpdateUserDTO } from './dto/update-user.dto.js';
 import { PasswordHasherService } from '../passwordHasher/passwordHasher.service.js';
 import { RefreshTokenService } from '../refreshToken/refresh.service.js';
 import { CursorPaginationDto } from './dto/cursor-pagination.dto.js';
+import { TransferDto } from './dto/transfer.dto.js';
+import { DataSource } from 'typeorm';
+import { Decimal } from 'decimal.js';
 
 @Injectable()
 export class UserService implements IUserService {
@@ -20,27 +28,33 @@ export class UserService implements IUserService {
     @InjectRepository(User) private readonly userRep: Repository<User>,
     private readonly passwordHash: PasswordHasherService,
     private readonly refreshTokenService: RefreshTokenService,
+    private readonly dataSource: DataSource,
   ) {}
   async findUsers(cursorPagination: CursorPaginationDto): Promise<UserPage> {
     const { searchLogin, cursor } = cursorPagination;
     const limit = cursorPagination.limit ?? 10;
-
+    const whereClause: any = {};
+    if (searchLogin) {
+      whereClause.login = ILike(`%${searchLogin}%`);
+    }
+    if (cursor) {
+      whereClause.createdAt = LessThan(new Date(cursor));
+    }
     const users = await this.userRep.find({
       select: {
+        id: true,
         login: true,
         email: true,
         age: true,
         description: true,
+        balance: true,
         createdAt: true,
       },
       take: limit + 1,
       order: {
         createdAt: 'DESC',
       },
-      where: {
-        login: searchLogin ? ILike(`%${searchLogin}%`) : undefined,
-        createdAt: cursor ? LessThan(new Date(cursor)) : undefined,
-      },
+      where: whereClause,
     });
 
     const hasNextPage = users.length > limit;
@@ -82,7 +96,6 @@ export class UserService implements IUserService {
       throw new NotFoundException('User to delete was not found');
     }
   }
-
   async findByCriteria(value: string, key: keyof User): Promise<User | null> {
     const user = await this.userRep.findOne({
       where: {
@@ -98,6 +111,7 @@ export class UserService implements IUserService {
         login: dto.login,
         age: dto.age,
         email: dto.email,
+        balance: dto.balance,
         description: dto.description,
         passwordHash: dto.passwordHash,
         role: UserRole.USER,
@@ -120,6 +134,70 @@ export class UserService implements IUserService {
         'Failed to save update password hash',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
+    }
+  }
+  async transferFunds(
+    senderId: string,
+    dto: TransferDto,
+  ): Promise<UpdatedTransferUser> {
+    const { receiverId, amount } = dto;
+    if (senderId === receiverId) {
+      throw new BadRequestException(
+        'Cannot commit transaction with identical users',
+      );
+    }
+    const decimalAmount = new Decimal(amount);
+    if (decimalAmount.lessThanOrEqualTo(0)) {
+      throw new BadRequestException('Amount must be greater than zero');
+    }
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const senderUser = await queryRunner.manager.findOne(User, {
+        where: { id: senderId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!senderUser) {
+        throw new BadRequestException('Sender user is not found');
+      }
+      const receiverUser = await queryRunner.manager.findOne(User, {
+        where: { id: receiverId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!receiverUser) {
+        throw new BadRequestException('Receiver user is not found');
+      }
+      const decimalSenderBalance = new Decimal(senderUser.balance);
+      const decimalReceiverBalance = new Decimal(receiverUser.balance);
+      if (decimalSenderBalance.lessThan(decimalAmount)) {
+        throw new BadRequestException('Balance is less than sending amount');
+      }
+      const receiverNewBalance = decimalReceiverBalance.plus(decimalAmount);
+      const senderNewBalance = decimalSenderBalance.minus(decimalAmount);
+      await queryRunner.manager.update(User, senderId, {
+        balance: senderNewBalance.toString(),
+      });
+      await queryRunner.manager.update(User, receiverId, {
+        balance: receiverNewBalance.toString(),
+      });
+
+      await queryRunner.commitTransaction();
+
+      return {
+        id: senderUser.id,
+        balance: senderNewBalance.toString(),
+        createdAt: senderUser.createdAt,
+        email: senderUser.email,
+        login: senderUser.login,
+      };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
     }
   }
 }

@@ -46,6 +46,7 @@ export class AuthService implements IAuthService {
       age: dto.age,
       description: dto.description,
       email: dto.email,
+      balance: dto.balance,
       passwordHash: await this.passwordHash.hash(dto.password),
     });
   }

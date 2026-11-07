@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   HttpCode,
+  Post,
   Put,
   Query,
   Req,
@@ -19,6 +20,7 @@ import {
   ApiOperation,
   ApiQuery,
 } from '@nestjs/swagger';
+import { TransferDto } from './dto/transfer.dto.js';
 
 @UseGuards(AuthJWTGuard)
 @Controller('users')
@@ -30,7 +32,7 @@ export class UserController {
   @ApiOperation({
     summary: 'Users search',
     description:
-      'Returns one page of users, newest first. Pass nextCursor back as cursor to load the following page. searchLogin filters the login.',
+      'Returns one page of users (login, email, age, description, balance, createdAt), newest first. Pass nextCursor back as cursor to load the following page. searchLogin filters the login.',
   })
   @ApiQuery({
     name: 'cursor',
@@ -60,7 +62,7 @@ export class UserController {
   @ApiOperation({
     summary: 'Authorized User search',
     description:
-      'Searching user info based on its token payload (parsed in the guard operation)',
+      'Returns the current user profile from the access token payload, including balance',
   })
   async findUser(@Req() req: any) {
     const { user } = req;
@@ -86,5 +88,18 @@ export class UserController {
   @HttpCode(204)
   async deleteUser(@Req() req: any) {
     return this.userService.delete(req.user.sub);
+  }
+
+  @ApiBearerAuth()
+  @Post('transaction')
+  @ApiOperation({
+    summary: 'Transfer funds',
+    description:
+      'Moves amount from the current user balance to another user and returns the updated sender balance',
+  })
+  @ApiBody({ type: TransferDto })
+  @HttpCode(201)
+  async sendMoney(@Req() req: any, @Body() dto: TransferDto) {
+    return this.userService.transferFunds(req.user.sub, dto);
   }
 }

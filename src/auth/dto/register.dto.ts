@@ -18,6 +18,8 @@ export class RegisterDTO {
   @IsInt()
   age: number;
   @IsString()
+  balance: string;
+  @IsString()
   @MinLength(0)
   @MaxLength(1000)
   description: string;
