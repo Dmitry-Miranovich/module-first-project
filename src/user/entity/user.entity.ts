@@ -12,6 +12,7 @@ import type { Relation } from 'typeorm';
 import { UserFile } from '../../providers/entity/user-file.entity.js';
 export enum UserRole {
   USER = 'USER',
+  ADMIN = 'ADMIN',
 }
 
 @Entity()

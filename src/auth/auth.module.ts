@@ -4,9 +4,11 @@ import { UserModule } from '../user/user.module.js';
 import { AuthService } from './auth.service.js';
 import { PasswordHasherModule } from '../passwordHasher/passwordHasher.module.js';
 import { RefreshTokenModule } from '../refreshToken/refresh.module.js';
-import { AuthJWTGuard } from './auth.guard.js';
+import { AuthJWTGuard } from './guards/auth.guard.js';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { AuthAdminService } from './auth.admin.js';
+import { AdminAuthGuard } from './guards/admin-auth.guard.js';
 
 @Module({
   imports: [
@@ -24,7 +26,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     RefreshTokenModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, AuthJWTGuard],
-  exports: [AuthService, AuthJWTGuard],
+  providers: [AuthService, AuthJWTGuard, AdminAuthGuard, AuthAdminService],
+  exports: [AuthService, AuthJWTGuard, AdminAuthGuard],
 })
 export class AuthModule {}

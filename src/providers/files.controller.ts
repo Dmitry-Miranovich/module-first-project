@@ -14,7 +14,7 @@ import {
 } from '@nestjs/platform-express';
 import type { Express } from 'express';
 import { FileService } from './files.service.js';
-import { AuthJWTGuard } from '../auth/auth.guard.js';
+import { AuthJWTGuard } from '../auth/guards/auth.guard.js';
 import { FileSizeValidationPipe } from './pipes/file-size.pipe.js';
 import { UserService } from '../user/user.service.js';
 

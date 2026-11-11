@@ -4,8 +4,10 @@ import {
   HttpStatus,
   Injectable,
   NotFoundException,
+  UseGuards,
 } from '@nestjs/common';
 import {
+  CreateAdminUser,
   IUserService,
   UpdatedTransferUser,
   UserPage,
@@ -33,7 +35,7 @@ export class UserService implements IUserService {
   async findUsers(cursorPagination: CursorPaginationDto): Promise<UserPage> {
     const { searchLogin, cursor } = cursorPagination;
     const limit = cursorPagination.limit ?? 10;
-    const whereClause: any = {};
+    const whereClause: any = { role: UserRole.USER };
     if (searchLogin) {
       whereClause.login = ILike(`%${searchLogin}%`);
     }
@@ -126,6 +128,27 @@ export class UserService implements IUserService {
       );
     }
   }
+  async createAdmin(dto: CreateAdminUser): Promise<User> {
+    try {
+      const newUser = this.userRep.create({
+        login: dto.login,
+        age: dto.age,
+        email: dto.email,
+        balance: dto.balance,
+        description: dto.description,
+        passwordHash: dto.passwordHash,
+        role: dto.role,
+      });
+      await this.userRep.save(newUser);
+      return newUser;
+    } catch (err) {
+      console.log(err);
+      throw new HttpException(
+        'Failed to save user',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
   async updatePasswordHash(id: string, n_hash?: string) {
     try {
       await this.userRep.update({ id: id }, { passwordHash: n_hash });
@@ -157,14 +180,14 @@ export class UserService implements IUserService {
 
     try {
       const senderUser = await queryRunner.manager.findOne(User, {
-        where: { id: senderId },
+        where: { id: senderId, role: UserRole.USER },
         lock: { mode: 'pessimistic_write' },
       });
       if (!senderUser) {
         throw new BadRequestException('Sender user is not found');
       }
       const receiverUser = await queryRunner.manager.findOne(User, {
-        where: { id: receiverId },
+        where: { id: receiverId, role: UserRole.USER },
         lock: { mode: 'pessimistic_write' },
       });
       if (!receiverUser) {
@@ -199,5 +222,13 @@ export class UserService implements IUserService {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  async resetAllBalances(): Promise<number> {
+    const updatedResult = await this.userRep.update(
+      { role: UserRole.USER },
+      { balance: '0.00' },
+    );
+    return updatedResult.affected ?? 0;
   }
 }

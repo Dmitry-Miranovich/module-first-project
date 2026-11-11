@@ -1,31 +1,32 @@
 // email.processor.ts
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { BeforeApplicationShutdown } from '@nestjs/common';
+import {
+  BeforeApplicationShutdown,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { Job } from 'bullmq';
+import { UserService } from '../user/user.service.js';
 
 @Processor('balance')
 export class BalanceProcessor
   extends WorkerHost
   implements BeforeApplicationShutdown
 {
+  constructor(private readonly userService: UserService) {
+    super();
+  }
   async process(job: Job): Promise<any> {
-    // Distinguish job types by name
     switch (job.name) {
       case 'balance_reset':
-        await this.sendWelcome(job.data);
+        await this.userService.resetAllBalances();
         break;
       default:
-        throw new Error(`Unknown job: ${job.name}`);
+        throw new InternalServerErrorException(`Unknown job: ${job.name}`);
     }
     return { done: true };
   }
 
-  private async sendWelcome(data: { userId: string; email: string }) {
-    console.log(`Sending welcome email to ${data.email}`);
-  }
-
   async beforeApplicationShutdown() {
-    console.log('Shutdown inbound');
     await this.worker.close();
   }
 }

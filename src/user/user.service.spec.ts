@@ -75,6 +75,7 @@ describe('UserService', () => {
         take: 11,
         order: { createdAt: 'DESC' },
         where: {
+          role: UserRole.USER,
           login: ILike('%ann%'),
         },
       });
@@ -100,6 +101,7 @@ describe('UserService', () => {
         expect.objectContaining({
           take: 2,
           where: {
+            role: UserRole.USER,
             createdAt: LessThan(new Date('2026-10-21T00:00:00.000Z')),
           },
         }),

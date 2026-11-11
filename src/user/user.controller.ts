@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { CursorPaginationDto } from './dto/cursor-pagination.dto.js';
 import { UpdateUserDTO } from './dto/update-user.dto.js';
-import { AuthJWTGuard } from '../auth/auth.guard.js';
+import { AuthJWTGuard } from '../auth/guards/auth.guard.js';
 import { UserService } from './user.service.js';
 import {
   ApiBearerAuth,
